@@ -24,9 +24,11 @@ public class InventoryController {
 	@Autowired
 	InventoryService inventoryService;
 
-	@RequestMapping(value = "inventorylist", headers = "Accept=application/json", method = RequestMethod.GET)
-	public InventoryResponse getInventoryList() {
-		InventoryResponse response = inventoryService.getAllInventory();
+	@RequestMapping(value = "inventorylist/{id}", headers = "Accept=application/json", method = RequestMethod.GET)
+	public InventoryResponse getInventoryList(
+			@PathVariable(value = "id") String key) {
+		InventoryResponse response = inventoryService.getAllInventory(Integer
+				.parseInt(key));
 		return response;
 	}
 

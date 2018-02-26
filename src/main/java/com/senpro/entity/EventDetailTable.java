@@ -1,5 +1,8 @@
 package com.senpro.entity;
-// Generated Oct 29, 2017 10:47:38 AM by Hibernate Tools 5.2.0.CR1
+
+// Generated Nov 15, 2017 12:32:11 AM by Hibernate Tools 3.4.0.CR1
+
+
 
 import java.math.BigDecimal;
 
@@ -22,18 +25,18 @@ import com.senpro.utils.InventoryConstants;
  */
 
 
-
 @NamedQueries(  
-    {  
-        @NamedQuery(  
-        name = InventoryConstants.NAMED_QUERY_deleteRecordById,  
-        query = "delete EventDetailTable  where id = :id"  
-        )  
-    }  
-)  
+	    {  
+	        @NamedQuery(  
+	        name = InventoryConstants.NAMED_QUERY_deleteRecordById,  
+	        query = "delete EventDetailTable  where id = :id"  
+	        )  
+	    }  
+	)  
+
 
 @Entity
-@Table(name = "eventDetailTable", catalog = "Events")
+@Table(name = "EventDetailTable", catalog = "Events")
 public class EventDetailTable implements java.io.Serializable {
 
 	private Integer eventId;
@@ -44,6 +47,7 @@ public class EventDetailTable implements java.io.Serializable {
 	private BigDecimal ticketPrice;
 	private int nbrOfTicketsLeft;
 	private String description;
+	private String imagePath;
 
 	public EventDetailTable() {
 	}
@@ -53,8 +57,10 @@ public class EventDetailTable implements java.io.Serializable {
 		this.nbrOfTicketsLeft = nbrOfTicketsLeft;
 	}
 
-	public EventDetailTable(String eventTitle, String eventDate, Integer eventStartTime, Integer eventEndTime,
-			BigDecimal ticketPrice, int nbrOfTicketsLeft, String description) {
+	public EventDetailTable(String eventTitle, String eventDate,
+			Integer eventStartTime, Integer eventEndTime,
+			BigDecimal ticketPrice, int nbrOfTicketsLeft, String description,
+			String imagePath) {
 		this.eventTitle = eventTitle;
 		this.eventDate = eventDate;
 		this.eventStartTime = eventStartTime;
@@ -62,11 +68,11 @@ public class EventDetailTable implements java.io.Serializable {
 		this.ticketPrice = ticketPrice;
 		this.nbrOfTicketsLeft = nbrOfTicketsLeft;
 		this.description = description;
+		this.imagePath = imagePath;
 	}
 
 	@Id
 	@GeneratedValue(strategy = IDENTITY)
-
 	@Column(name = "eventID", unique = true, nullable = false)
 	public Integer getEventId() {
 		return this.eventId;
@@ -137,6 +143,15 @@ public class EventDetailTable implements java.io.Serializable {
 
 	public void setDescription(String description) {
 		this.description = description;
+	}
+
+	@Column(name = "imagePath", length = 60)
+	public String getImagePath() {
+		return this.imagePath;
+	}
+
+	public void setImagePath(String imagePath) {
+		this.imagePath = imagePath;
 	}
 
 }

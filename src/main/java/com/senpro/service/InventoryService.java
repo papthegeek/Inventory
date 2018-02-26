@@ -1,5 +1,9 @@
 package com.senpro.service;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -15,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,9 +40,9 @@ public class InventoryService {
 	Log LOG = LogFactory.getLog(InventoryService.class);
 
 	@Transactional
-	public InventoryResponse getAllInventory() {
+	public InventoryResponse getAllInventory(int key) {
 
-		List<EventDetailTable> events = inventoryDao.getAllInventory();
+		List<EventDetailTable> events = inventoryDao.getAllInventory( key);
 
 		return getInventoryList(events);
 	}
@@ -49,19 +54,21 @@ public class InventoryService {
 		EventDetailTable event = new EventDetailTable();
 		try {
 			event = inventoryDao.getEvent(key);
-			if(null != event && event.getEventId() != null){
+			if (null != event && event.getEventId() != null) {
 				events = new ArrayList<EventDetailTable>();
 				events.add(event);
 				InventoryResponse inventoryResponse = getInventoryList(events);
-				Map<String,String> headers = new HashMap<String, String>();
+				Map<String, String> headers = new HashMap<String, String>();
 				headers.put("Status", "200 OK");
 				headers.put("Response Message", "OK");
-				return Response.ok(inventoryResponse).header("Status", Status.OK).build();
+				return Response.ok(inventoryResponse)
+						.header("Status", Status.OK).build();
 			}
 		} catch (Exception ex) {
 			LOG.error("Exception occured in getEventRecord method!!!");
 		}
-		return Response.ok("Record Not Found in DB!!").header("Status", Status.NOT_FOUND).build();
+		return Response.ok("Record Not Found in DB!!")
+				.header("Status", Status.NOT_FOUND).build();
 	}
 
 	@Transactional
@@ -109,7 +116,7 @@ public class InventoryService {
 	private InventoryResponse getInventoryList(List<EventDetailTable> events) {
 		InventoryResponse response = null;
 		try {
-			if(null != events && !CollectionUtils.isEmpty(events)){
+			if (null != events && !CollectionUtils.isEmpty(events)) {
 				response = new InventoryResponse();
 				for (EventDetailTable detail : events) {
 					if (null != detail) {
@@ -142,10 +149,17 @@ public class InventoryService {
 							eventdetails
 									.setDescription(detail.getDescription());
 						}
+						if (!StringUtils.isEmpty(detail.getImagePath())) {
+							eventdetails.setImagePath(detail.getImagePath());
+						}
+						if (!StringUtils.isEmpty(detail.getEventId())) {
+							eventdetails.setEventId(Integer.toString(detail
+									.getEventId()));
+						}
 						response.getEvents().add(eventdetails);
 					}
 				}
-			}else {
+			} else {
 				LOG.error("Requested Record not found in / returned from DB!!");
 			}
 
@@ -163,8 +177,7 @@ public class InventoryService {
 	}
 
 	public static Integer convertHMmSsToSeconds(String time) {
-		String[] units = time.split(":"); // will break the string up into an
-											// array
+		String[] units = time.split(":");
 		Integer seconds = (Integer.parseInt(units[0]) * 3600
 				+ Integer.parseInt(units[1]) * 60 + Integer.parseInt(units[2]));
 		return seconds;
@@ -177,9 +190,31 @@ public class InventoryService {
 			format.parse(time);
 			return true;
 		} catch (Exception e) {
-			LOG.error("Given Time is Invalid format !!");
+			LOG.error("Given Time is in Invalid format !!");
 			return false;
 		}
+	}
+
+	private String encodeFileToBase64Binary(File file) {
+		String encodedfile = null;
+		try {
+			FileInputStream fileInputStreamReader = new FileInputStream(file);
+			byte[] bytes = new byte[(int) file.length()];
+			fileInputStreamReader.read(bytes);
+			encodedfile = new String(Base64.encodeBase64(bytes), "UTF-8");
+			/*
+			 * System.out.println(encodedfile);
+			 * System.out.println(encodedfile.toString());
+			 */
+		} catch (FileNotFoundException e) {
+			LOG.error("FileNotFoundException occurred while encoding! cause: "
+					+ e.getCause() + " message: " + e.getMessage());
+		} catch (IOException e) {
+			LOG.error("IOException occurred while encoding! cause: "
+					+ e.getCause() + " message: " + e.getMessage());
+		}
+
+		return encodedfile;
 	}
 
 }

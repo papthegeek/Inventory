@@ -10,6 +10,8 @@ public class EventDetail {
 	private String nbrOfTicketsLeft;
 	private Seating seating;
 	private String description;
+	private String imagePath;
+	private String eventId;
 	
 	
 	public String getEventTitle() {
@@ -59,6 +61,18 @@ public class EventDetail {
 	}
 	public void setDescription(String description) {
 		this.description = description;
+	}
+	public String getImagePath() {
+		return imagePath;
+	}
+	public void setImagePath(String imagePath) {
+		this.imagePath = imagePath;
+	}
+	public String getEventId() {
+		return eventId;
+	}
+	public void setEventId(String eventId) {
+		this.eventId = eventId;
 	}
 
 	

@@ -26,10 +26,10 @@ public class InventoryDao {
 	}
 
 	@SuppressWarnings("unchecked")
-	public List<EventDetailTable> getAllInventory() {
+	public List<EventDetailTable> getAllInventory(int key) {
 		Session session = this.sessionFactory.getCurrentSession();
 		List<EventDetailTable> eventDetailsRecords = session.createQuery(
-				"from EventDetailTable").list();
+				"from EventDetailTable WHERE eventID > :key").setInteger("key", key).setMaxResults(6).list();
 
 		if (null != eventDetailsRecords && eventDetailsRecords.size() > 0) {
 			LOG.info("Records Retrieved from DB");
