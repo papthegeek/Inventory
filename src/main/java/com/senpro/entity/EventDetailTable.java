@@ -145,7 +145,7 @@ public class EventDetailTable implements java.io.Serializable {
 		this.description = description;
 	}
 
-	@Column(name = "imagePath", length = 60)
+	@Column(name = "imagePath", length = 65535)
 	public String getImagePath() {
 		return this.imagePath;
 	}

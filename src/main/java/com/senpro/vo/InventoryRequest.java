@@ -15,7 +15,8 @@ public class InventoryRequest {
 	private BigDecimal ticketPrice;
 	private int nbrOfTicketsLeft;
 	private String description;
-	private List<InventoryRequest> requestList = new ArrayList<InventoryRequest>();
+	private String imageString;
+	/*private List<InventoryRequest> requestList = new ArrayList<InventoryRequest>();*/
 	
 	public String getEventTitle() {
 		return eventTitle;
@@ -59,11 +60,11 @@ public class InventoryRequest {
 	public void setDescription(String description) {
 		this.description = description;
 	}
-	public List<InventoryRequest> getRequestList() {
-		return requestList;
+	public String getImageString() {
+		return imageString;
 	}
-	public void setRequestList(List<InventoryRequest> requestList) {
-		this.requestList = requestList;
+	public void setImageString(String imageString) {
+		this.imageString = imageString;
 	}
 	
 	

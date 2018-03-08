@@ -4,16 +4,18 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+
+import com.cloudinary.*;
+import com.cloudinary.utils.ObjectUtils;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -42,7 +44,7 @@ public class InventoryService {
 	@Transactional
 	public InventoryResponse getAllInventory(int key) {
 
-		List<EventDetailTable> events = inventoryDao.getAllInventory( key);
+		List<EventDetailTable> events = inventoryDao.getAllInventory(key);
 
 		return getInventoryList(events);
 	}
@@ -50,6 +52,7 @@ public class InventoryService {
 	@Transactional
 	public Response getEventRecord(int key) {
 		Response serviceResponse;
+		//InventoryResponse inventoryResponse = new InventoryResponse();
 		List<EventDetailTable> events = null;
 		EventDetailTable event = new EventDetailTable();
 		try {
@@ -61,14 +64,13 @@ public class InventoryService {
 				Map<String, String> headers = new HashMap<String, String>();
 				headers.put("Status", "200 OK");
 				headers.put("Response Message", "OK");
-				return Response.ok(inventoryResponse)
-						.header("Status", Status.OK).build();
+				return Response.ok(inventoryResponse).header("Status", Status.OK).build();
+				
 			}
 		} catch (Exception ex) {
 			LOG.error("Exception occured in getEventRecord method!!!");
 		}
-		return Response.ok("Record Not Found in DB!!")
-				.header("Status", Status.NOT_FOUND).build();
+		return Response.ok("Record Not Found in DB!!").header("Status", Status.NOT_FOUND).build();
 	}
 
 	@Transactional
@@ -76,34 +78,39 @@ public class InventoryService {
 		try {
 			if (!CollectionUtils.isEmpty(requestList)) {
 				for (InventoryRequest request : requestList) {
-					EventDetailTable record = new EventDetailTable();
-					record.setDescription(request.getDescription());
-					record.setEventDate(request.getEventDate());
-					record.setEventTitle(request.getEventTitle());
-					record.setNbrOfTicketsLeft(request.getNbrOfTicketsLeft());
-					record.setTicketPrice(request.getTicketPrice());
-					if (null != request.getEventStartTime()) {
-						if (isValidTimeFormat(request.getEventStartTime())) {
-							record.setEventStartTime(convertHMmSsToSeconds(request
-									.getEventStartTime()));
-						} else {
-							LOG.error("Given Start Time is not in correct format !!");
+
+					if (!StringUtils.isEmpty(request.getEventTitle())) {
+						EventDetailTable record = new EventDetailTable();
+						record.setDescription(request.getDescription());
+						record.setEventDate(request.getEventDate());
+						record.setEventTitle(request.getEventTitle());
+						record.setNbrOfTicketsLeft(request.getNbrOfTicketsLeft());
+						record.setTicketPrice(request.getTicketPrice());
+						String imagePath = addCloudinaryImage(request.getImageString());
+						if(!StringUtils.isEmpty(imagePath)) {
+							record.setImagePath(imagePath);
 						}
-					}
-					if (null != request.getEventEndTime()) {
-						if (isValidTimeFormat(request.getEventEndTime())) {
-							record.setEventEndTime(convertHMmSsToSeconds(request
-									.getEventEndTime()));
-						} else {
-							LOG.error("Given End Time is not in correct format !!");
+						
+						if (null != request.getEventStartTime()) {
+							if (isValidTimeFormat(request.getEventStartTime())) {
+								record.setEventStartTime(convertHMmSsToSeconds(request.getEventStartTime()));
+							} else {
+								LOG.error("Given Start Time is not in correct format !!");
+							}
 						}
+						if (null != request.getEventEndTime()) {
+							if (isValidTimeFormat(request.getEventEndTime())) {
+								record.setEventEndTime(convertHMmSsToSeconds(request.getEventEndTime()));
+							} else {
+								LOG.error("Given End Time is not in correct format !!");
+							}
+						}
+						inventoryDao.addRecord(record);
 					}
-					inventoryDao.addRecord(record);
 				}
 			}
 		} catch (Exception ex) {
-			LOG.error("Exception occured in addRecordsToInventory method! cause:"
-					+ ex.getMessage());
+			LOG.error("Exception occured in addRecordsToInventory method! cause:" + ex.getMessage());
 		}
 	}
 
@@ -129,32 +136,25 @@ public class InventoryService {
 						}
 						if (!StringUtils.isEmpty(detail.getEventStartTime())) {
 							eventdetails
-									.setEventStartTime(convertSecondsToHMmSs(detail
-											.getEventStartTime().longValue()));
+									.setEventStartTime(convertSecondsToHMmSs(detail.getEventStartTime().longValue()));
 						}
 						if (!StringUtils.isEmpty(detail.getEventEndTime())) {
-							eventdetails
-									.setEventEndTime(convertSecondsToHMmSs(detail
-											.getEventEndTime().longValue()));
+							eventdetails.setEventEndTime(convertSecondsToHMmSs(detail.getEventEndTime().longValue()));
 						}
 						if (!StringUtils.isEmpty(detail.getTicketPrice())) {
-							eventdetails.setTicketPrice(detail.getTicketPrice()
-									.toPlainString());
+							eventdetails.setTicketPrice(detail.getTicketPrice().toPlainString());
 						}
 						if (!StringUtils.isEmpty(detail.getNbrOfTicketsLeft())) {
-							eventdetails.setNbrOfTicketsLeft(Integer
-									.toString(detail.getNbrOfTicketsLeft()));
+							eventdetails.setNbrOfTicketsLeft(Integer.toString(detail.getNbrOfTicketsLeft()));
 						}
 						if (!StringUtils.isEmpty(detail.getDescription())) {
-							eventdetails
-									.setDescription(detail.getDescription());
+							eventdetails.setDescription(detail.getDescription());
 						}
 						if (!StringUtils.isEmpty(detail.getImagePath())) {
 							eventdetails.setImagePath(detail.getImagePath());
 						}
 						if (!StringUtils.isEmpty(detail.getEventId())) {
-							eventdetails.setEventId(Integer.toString(detail
-									.getEventId()));
+							eventdetails.setEventId(Integer.toString(detail.getEventId()));
 						}
 						response.getEvents().add(eventdetails);
 					}
@@ -178,14 +178,13 @@ public class InventoryService {
 
 	public static Integer convertHMmSsToSeconds(String time) {
 		String[] units = time.split(":");
-		Integer seconds = (Integer.parseInt(units[0]) * 3600
-				+ Integer.parseInt(units[1]) * 60 + Integer.parseInt(units[2]));
+		Integer seconds = (Integer.parseInt(units[0]) * 3600 + Integer.parseInt(units[1]) * 60
+				+ Integer.parseInt(units[2]));
 		return seconds;
 	}
 
 	public boolean isValidTimeFormat(String time) {
-		SimpleDateFormat format = new SimpleDateFormat(
-				InventoryConstants.TIME_FORMAT_HHMMSS);
+		SimpleDateFormat format = new SimpleDateFormat(InventoryConstants.TIME_FORMAT_HHMMSS);
 		try {
 			format.parse(time);
 			return true;
@@ -193,6 +192,22 @@ public class InventoryService {
 			LOG.error("Given Time is in Invalid format !!");
 			return false;
 		}
+	}
+
+	private String addCloudinaryImage(String imageString) {
+		String url = null;
+		try {
+
+			Cloudinary cloudinary = new Cloudinary(ObjectUtils.asMap(InventoryConstants.CloudName,
+					InventoryConstants.cdnCloudName, InventoryConstants.ApiKey, InventoryConstants.cdnApiKey,
+					InventoryConstants.Secret, InventoryConstants.cdnSecret));
+
+			url = (String) cloudinary.uploader().upload(imageString, ObjectUtils.emptyMap()).get(InventoryConstants.cdnUrl);
+
+		} catch (IOException e) {
+
+		}
+		return url;
 	}
 
 	private String encodeFileToBase64Binary(File file) {
@@ -203,15 +218,13 @@ public class InventoryService {
 			fileInputStreamReader.read(bytes);
 			encodedfile = new String(Base64.encodeBase64(bytes), "UTF-8");
 			/*
-			 * System.out.println(encodedfile);
-			 * System.out.println(encodedfile.toString());
+			 * System.out.println(encodedfile); System.out.println(encodedfile.toString());
 			 */
 		} catch (FileNotFoundException e) {
-			LOG.error("FileNotFoundException occurred while encoding! cause: "
-					+ e.getCause() + " message: " + e.getMessage());
+			LOG.error("FileNotFoundException occurred while encoding! cause: " + e.getCause() + " message: "
+					+ e.getMessage());
 		} catch (IOException e) {
-			LOG.error("IOException occurred while encoding! cause: "
-					+ e.getCause() + " message: " + e.getMessage());
+			LOG.error("IOException occurred while encoding! cause: " + e.getCause() + " message: " + e.getMessage());
 		}
 
 		return encodedfile;
