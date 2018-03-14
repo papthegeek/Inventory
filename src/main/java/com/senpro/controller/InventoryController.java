@@ -2,9 +2,6 @@ package com.senpro.controller;
 
 import java.util.List;
 
-import javax.ws.rs.PathParam;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,26 +30,20 @@ public class InventoryController {
 	}
 
 	@RequestMapping(value = "eventDetails/{id}", headers = "Accept=application/json", method = RequestMethod.GET)
-	public Response getEventDetails(
+	public InventoryResponse getEventDetails(
 			@PathVariable(value = "id") String key) {
 		return inventoryService.getEventRecord(Integer
 				.parseInt(key));
 	}
 
 	@RequestMapping(value = "addEvents", headers = "Accept=application/json", consumes = "application/json", method = RequestMethod.POST)
-	public Response UpdateInventory(@RequestBody List<InventoryRequest> request) {
-		inventoryService.addRecordsToInventory(request);
-		return Response.status(Status.OK).entity("Records successfully added").build();
+	public InventoryResponse  UpdateInventory(@RequestBody List<InventoryRequest> request) {
+		return inventoryService.addRecordsToInventory(request);
 	}
 	
 	@RequestMapping(value ="removeEvent/{id}" , headers = "Accept=application/json", method = RequestMethod.DELETE)
-	public Response removeRecord(@PathVariable(value = "id") String  key){
-		int result = inventoryService.removeRecord(Integer.parseInt(key));
-		if(result > 0){
-		
-			return Response.status(Status.OK).entity("Record successfully deleted! id: " + key).build();
-		}
-		return Response.status(Status.NOT_FOUND).entity("Record Was NOT successfully deleted! id: " + key).build();	
+	public InventoryResponse removeRecord(@PathVariable(value = "id") String  key, @RequestBody InventoryRequest request){
+		return inventoryService.removeRecord(Integer.parseInt(key), request);
 	}
 
 }

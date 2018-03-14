@@ -29,9 +29,11 @@ import org.apache.commons.logging.LogFactory;
 import com.senpro.dao.InventoryDao;
 import com.senpro.entity.EventDetailTable;
 import com.senpro.utils.InventoryConstants;
+import com.senpro.vo.CodeDesc;
 import com.senpro.vo.EventDetail;
 import com.senpro.vo.InventoryRequest;
 import com.senpro.vo.InventoryResponse;
+import com.senpro.vo.ResponseError;
 
 @Service("inventoryService")
 public class InventoryService {
@@ -44,37 +46,51 @@ public class InventoryService {
 	@Transactional
 	public InventoryResponse getAllInventory(int key) {
 
-		List<EventDetailTable> events = inventoryDao.getAllInventory(key);
+		List<EventDetailTable> events = null;
+		InventoryResponse response = new InventoryResponse();
+		try {
+			events = inventoryDao.getAllInventory(key);
+			if (CollectionUtils.isNotEmpty(events)) {
+				response = getInventoryList(events);
+			}else {
+				ResponseError error = new ResponseError();
+				error.setCode("500001");
+				error.setDescription("Could not retrieve record");
+				response.setError(error);
+			}
+		} catch (Exception e) {
+			LOG.error("Exception occured in getAllInventory method!!!");
+		}
 
-		return getInventoryList(events);
+		return response;
 	}
 
 	@Transactional
-	public Response getEventRecord(int key) {
-		Response serviceResponse;
-		//InventoryResponse inventoryResponse = new InventoryResponse();
+	public InventoryResponse getEventRecord(int key) {
+		InventoryResponse inventoryResponse = new InventoryResponse();
 		List<EventDetailTable> events = null;
-		EventDetailTable event = new EventDetailTable();
+		EventDetailTable event = null;
 		try {
 			event = inventoryDao.getEvent(key);
 			if (null != event && event.getEventId() != null) {
 				events = new ArrayList<EventDetailTable>();
-				events.add(event);
-				InventoryResponse inventoryResponse = getInventoryList(events);
-				Map<String, String> headers = new HashMap<String, String>();
-				headers.put("Status", "200 OK");
-				headers.put("Response Message", "OK");
-				return Response.ok(inventoryResponse).header("Status", Status.OK).build();
-				
+				events.add(event);inventoryResponse = getInventoryList(events);				
+			} else {
+				ResponseError error = new ResponseError();
+				error.setCode("500001");
+				error.setDescription("Could not retrieve record");
+				inventoryResponse.setError(error);
 			}
 		} catch (Exception ex) {
 			LOG.error("Exception occured in getEventRecord method!!!");
 		}
-		return Response.ok("Record Not Found in DB!!").header("Status", Status.NOT_FOUND).build();
+		return inventoryResponse;
 	}
 
 	@Transactional
-	public void addRecordsToInventory(List<InventoryRequest> requestList) {
+	public InventoryResponse addRecordsToInventory(List<InventoryRequest> requestList) {
+		
+		InventoryResponse inventoryResponse = new InventoryResponse();
 		try {
 			if (!CollectionUtils.isEmpty(requestList)) {
 				for (InventoryRequest request : requestList) {
@@ -106,18 +122,43 @@ public class InventoryService {
 							}
 						}
 						inventoryDao.addRecord(record);
+						CodeDesc responseCodeDesc = new CodeDesc();
+						responseCodeDesc.setCode("200002");
+						responseCodeDesc.setMessage("Record Successfully added");
+						inventoryResponse.setResponseCodeDesc(responseCodeDesc);
 					}
 				}
 			}
 		} catch (Exception ex) {
 			LOG.error("Exception occured in addRecordsToInventory method! cause:" + ex.getMessage());
+			ResponseError error = new ResponseError();
+			error.setCode("500002");
+			error.setDescription("Underlaying data layer error");
+			inventoryResponse.setError(error);
 		}
+		return inventoryResponse;
 	}
 
 	@Transactional
-	public int removeRecord(Integer key) {
+	public InventoryResponse removeRecord(Integer key, InventoryRequest request) {
 
-		return inventoryDao.deleteRecord(key);
+		deleteCloudinaryImage(request.getImagePath());
+		InventoryResponse inventoryResponse = new InventoryResponse();
+		int result = inventoryDao.deleteRecord(key);
+		if(result > 0){
+			
+			CodeDesc responseCodeDesc = new CodeDesc();
+			responseCodeDesc.setCode("200003");
+			responseCodeDesc.setMessage("Record Successfully Deleted");
+			inventoryResponse.setResponseCodeDesc(responseCodeDesc);
+		}else {
+			ResponseError error = new ResponseError();
+			error.setCode("500003");
+			error.setDescription("Underlaying data layer error");
+			inventoryResponse.setError(error);
+		}
+	
+		return inventoryResponse;
 	}
 
 	private InventoryResponse getInventoryList(List<EventDetailTable> events) {
@@ -209,25 +250,29 @@ public class InventoryService {
 		}
 		return url;
 	}
-
-	private String encodeFileToBase64Binary(File file) {
-		String encodedfile = null;
+	
+	
+	private void deleteCloudinaryImage(String imagePath) {
 		try {
-			FileInputStream fileInputStreamReader = new FileInputStream(file);
-			byte[] bytes = new byte[(int) file.length()];
-			fileInputStreamReader.read(bytes);
-			encodedfile = new String(Base64.encodeBase64(bytes), "UTF-8");
-			/*
-			 * System.out.println(encodedfile); System.out.println(encodedfile.toString());
-			 */
-		} catch (FileNotFoundException e) {
-			LOG.error("FileNotFoundException occurred while encoding! cause: " + e.getCause() + " message: "
-					+ e.getMessage());
-		} catch (IOException e) {
-			LOG.error("IOException occurred while encoding! cause: " + e.getCause() + " message: " + e.getMessage());
-		}
+			Cloudinary cloudinary = new Cloudinary(ObjectUtils.asMap(InventoryConstants.CloudName,
+					InventoryConstants.cdnCloudName, InventoryConstants.ApiKey, InventoryConstants.cdnApiKey,
+					InventoryConstants.Secret, InventoryConstants.cdnSecret));
 
-		return encodedfile;
+			
+			
+			cloudinary.uploader().destroy(getImageCloudProductId(imagePath), ObjectUtils.emptyMap());		
+
+		} catch (Exception e) {
+			LOG.info("Exception occured while deleteing Cloudinary image!");
+		}
 	}
+	
+	private String getImageCloudProductId(String imagePath) {
+		String productId = org.apache.commons.lang3.StringUtils.substring(imagePath,org.apache.commons.lang3.StringUtils.lastIndexOf(imagePath, "/") + 1);
+		return productId.substring(0,productId.indexOf("."));
+		
+	}
+
+
 
 }

@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.hibernate.HibernateException;
 import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import com.senpro.entity.EventDetailTable;
+import com.senpro.exception.BaseServiceException;
 import com.senpro.utils.InventoryConstants;
 
 @Repository("inventoryDao")
@@ -27,22 +29,28 @@ public class InventoryDao {
 
 	@SuppressWarnings("unchecked")
 	public List<EventDetailTable> getAllInventory(int key) {
-		Session session = this.sessionFactory.getCurrentSession();
-		List<EventDetailTable> eventDetailsRecords = session.createQuery(
-				"from EventDetailTable WHERE eventID > :key").setInteger("key", key).setMaxResults(6).list();
+		List<EventDetailTable> eventDetailsRecords = null;
+		try {
+			Session session = this.sessionFactory.getCurrentSession();
+			eventDetailsRecords = session.createQuery(
+					"from EventDetailTable WHERE eventID > :key").setInteger("key", key).setMaxResults(6).list();
 
-		if (null != eventDetailsRecords && eventDetailsRecords.size() > 0) {
-			LOG.info("Records Retrieved from DB");
-		} else {
-			LOG.error("nothing was fetched from DB");
+			if (null != eventDetailsRecords && eventDetailsRecords.size() > 0) {
+				LOG.info("Records Retrieved from DB");
+			} else {
+				LOG.error("nothing was fetched from DB");
+			}
+		} catch (HibernateException e) {
+			LOG.error(new StringBuilder("EXCEPTION: ").append(HibernateException.class.getName()).append(" CAUSE: ").append(e.getCause().toString()).append(" MESSAGE: ").append(e.getMessage()));
 		}
 		return eventDetailsRecords;
 	}
 
 	public EventDetailTable getEvent(int key) {
-		Session session = this.sessionFactory.getCurrentSession();
+		
 		EventDetailTable record = null;
 		try {
+			Session session = this.sessionFactory.getCurrentSession();
 			record = (EventDetailTable) session
 					.get(EventDetailTable.class, key);
 			
@@ -52,29 +60,28 @@ public class InventoryDao {
 			else 
 				LOG.error("Record was not found in DB!!! ");
 		} catch (Exception e) {
-			LOG.error("Exception occured while retrieving record from DB!");
+			LOG.error(new StringBuilder("EXCEPTION: ").append(Exception.class.getName()).append(" CAUSE: ").append(e.getCause().toString()).append(" MESSAGE: ").append(e.getMessage()));
 		}
 		return record;
 	}
 
 	public void addRecord(EventDetailTable record) {
-		Session session = this.sessionFactory.getCurrentSession();
 		try {
+			Session session = this.sessionFactory.getCurrentSession();
 			session.save(record);
 			LOG.info(" Record inserted into DB successfully !!");
 		} catch (Exception ex) {
 			LOG.error("Error updating records into DB! Rolling back changes! Cause: "
 					+ ex.getMessage());
-		} finally {
-
-		}
+			throw ex;
+		} 
 	}
 
 	public int deleteRecord(Integer key) {
-		Session session = this.sessionFactory.getCurrentSession();
 		int isdeleted = 0;
 		try {
 
+			Session session = this.sessionFactory.getCurrentSession();
 			isdeleted = session
 					.getNamedQuery(
 							InventoryConstants.NAMED_QUERY_deleteRecordById)

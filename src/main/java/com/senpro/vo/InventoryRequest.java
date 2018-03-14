@@ -16,6 +16,7 @@ public class InventoryRequest {
 	private int nbrOfTicketsLeft;
 	private String description;
 	private String imageString;
+	private String imagePath;
 	/*private List<InventoryRequest> requestList = new ArrayList<InventoryRequest>();*/
 	
 	public String getEventTitle() {
@@ -65,6 +66,12 @@ public class InventoryRequest {
 	}
 	public void setImageString(String imageString) {
 		this.imageString = imageString;
+	}
+	public String getImagePath() {
+		return imagePath;
+	}
+	public void setImagePath(String imagePath) {
+		this.imagePath = imagePath;
 	}
 	
 	
